@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vai no sorvetinho hoje?</title>
+<meta name="description" content="Gire a roleta e descubra se hoje tem sorvetinho!">
+<style>
+  :root {
+    --sim: #22c55e;
+    --sim-escuro: #15803d;
+    --nao: #ef4444;
+    --nao-escuro: #b91c1c;
+    --amarelo: #ffc72c;
+    --roxo: #6d28d9;
+    --tamanho: min(88vw, 62vh, 560px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    color: #1f1147;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  /* ---------- fundo: fachadas + vidro fosco branco ---------- */
+  .fundo {
+    position: fixed; inset: 0; z-index: 0;
+    display: grid; grid-template: repeat(3, 1fr) / repeat(4, 1fr);
+    background: #fff;
+  }
+  @media (max-aspect-ratio: 1/1) {
+    .fundo { grid-template: repeat(4, 1fr) / repeat(3, 1fr); }
+  }
+  .fundo div {
+    background-size: cover;
+    background-position: center;
+  }
+  .fosco {
+    position: fixed; inset: 0; z-index: 1;
+    background: rgba(255, 255, 255, .34);
+    -webkit-backdrop-filter: blur(1.5px);
+    backdrop-filter: blur(1.5px);
+  }
+
+  /* ---------- palco ---------- */
+  main {
+    position: relative; z-index: 2;
+    height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(10px, 2.4vh, 22px);
+    padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+    text-align: center;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(1.7rem, 6.2vw, 3.2rem);
+    line-height: 1.05;
+    font-weight: 900;
+    letter-spacing: -.5px;
+    color: #1f1147;
+    text-shadow: 0 3px 0 #fff, 0 6px 14px rgba(0, 0, 0, .2);
+  }
+
+  /* ---------- roleta ---------- */
+  .roleta {
+    position: relative;
+    width: var(--tamanho);
+    height: var(--tamanho);
+    margin-top: 2.5vh;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    filter: drop-shadow(0 18px 28px rgba(60, 20, 120, .45));
+    transition: transform .15s;
+  }
+  .roleta:active { transform: scale(.985); }
+  .roleta.girando { cursor: progress; }
+
+  .aro {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd34e, #ff9f0a);
+    box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .6), inset 0 0 18px rgba(0, 0, 0, .35);
+  }
+  .lampadas { position: absolute; inset: 0; pointer-events: none; }
+  .lampada {
+    position: absolute; left: 50%; top: 50%;
+    width: 3.4%; height: 3.4%;
+    margin: -1.7% 0 0 -1.7%;
+    border-radius: 50%;
+    background: #fffbe0;
+    box-shadow: 0 0 8px 2px #fff6a8;
+    animation: pisca 1s steps(1) infinite;
+  }
+  .lampada:nth-child(even) { animation-delay: .5s; }
+  .girando .lampada { animation-duration: .25s; }
+  .girando .lampada:nth-child(even) { animation-delay: .125s; }
+  @keyframes pisca {
+    0%   { background: #fffbe0; box-shadow: 0 0 10px 3px #fff6a8; }
+    50%  { background: #ffe9a8; box-shadow: 0 0 3px 0 #ffe9a8; }
+  }
+
+  .disco {
+    position: absolute; inset: 6.5%;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 0 0 4px #fff, 0 0 0 7px rgba(0, 0, 0, .12);
+  }
+  .disco canvas {
+    width: 100%; height: 100%; display: block;
+    transition: transform 5.2s cubic-bezier(.12, .62, .08, 1);
+  }
+
+  .centro {
+    position: absolute; left: 50%; top: 50%;
+    width: 21%; height: 21%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    background: radial-gradient(circle at 35% 30%, #fff 0%, #ffe9a8 45%, #ffb300 100%);
+    box-shadow: 0 0 0 5px #fff, 0 6px 14px rgba(0, 0, 0, .4);
+    font-size: calc(var(--tamanho) * .105);
+    line-height: 1;
+  }
+  .centro::after {
+    content: "GIRAR";
+    position: absolute; bottom: 10%;
+    font-size: calc(var(--tamanho) * .028);
+    font-weight: 900; letter-spacing: 1px;
+    color: #7c2d12;
+  }
+  .centro span { margin-top: -14%; }
+  .roleta:not(.girando) .centro { animation: pulsa 1.2s ease-in-out infinite; }
+  @keyframes pulsa {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.09); }
+  }
+  .girando .centro::after { content: "..."; }
+
+  .ponteiro {
+    position: absolute; left: 50%; top: -3.5%;
+    width: 11%; height: 14%;
+    transform: translateX(-50%);
+    z-index: 3;
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .45));
+  }
+  .ponteiro svg { width: 100%; height: 100%; display: block; }
+  .roleta.balanca .ponteiro { animation: balanca .12s linear infinite; transform-origin: 50% 20%; }
+  @keyframes balanca {
+    0%, 100% { transform: translateX(-50%) rotate(0deg); }
+    50% { transform: translateX(-50%) rotate(-9deg); }
+  }
+
+  .botao {
+    appearance: none; border: 0; cursor: pointer;
+    font: inherit; font-weight: 900;
+    font-size: clamp(1.05rem, 4.2vw, 1.5rem);
+    color: #fff;
+    padding: .7em 1.8em;
+    border-radius: 99px;
+    background: linear-gradient(180deg, #ff5ea8, #d9267d);
+    box-shadow: 0 6px 0 #9d174d, 0 12px 22px rgba(157, 23, 77, .4);
+    transition: transform .1s, box-shadow .1s;
+    touch-action: manipulation;
+  }
+  .botao:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 1px 0 #9d174d, 0 4px 10px rgba(157, 23, 77, .4); }
+  .botao:disabled { opacity: .6; cursor: progress; }
+
+  /* ---------- resultado ---------- */
+  .veu {
+    position: fixed; inset: 0; z-index: 10;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 18px;
+    background: rgba(30, 10, 60, .55);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  .veu.aberto { display: flex; animation: aparece .25s ease-out; }
+  @keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
+
+  .cartao {
+    width: min(100%, 420px);
+    max-height: 100%;
+    overflow: auto;
+    background: #fff;
+    border-radius: 28px;
+    padding: 24px 22px 26px;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+    border-top: 10px solid var(--cor);
+    animation: pula .5s cubic-bezier(.2, 1.4, .4, 1);
+  }
+  .cartao.sim { --cor: var(--sim); }
+  .cartao.nao { --cor: var(--nao); }
+  @keyframes pula { from { transform: scale(.6) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .rosto {
+    width: min(62vw, 250px); aspect-ratio: 1;
+    margin: -6px auto 4px;
+    display: grid; place-items: center;
+    font-size: min(30vw, 120px);
+  }
+  .rosto img {
+    width: 100%; height: 100%; object-fit: contain; display: block;
+    filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .3));
+  }
+  .nao .rosto { animation: treme .5s 2 .4s; }
+  .sim .rosto { animation: salta .6s ease-in-out infinite alternate; }
+  @keyframes treme { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+  @keyframes salta { to { transform: translateY(-10px) rotate(3deg); } }
+
+  .veredito {
+    margin: 0 0 6px;
+    font-size: clamp(2rem, 9vw, 2.8rem);
+    font-weight: 900;
+    line-height: 1;
+    color: var(--cor);
+  }
+  .sim .veredito { color: var(--sim-escuro); }
+  .nao .veredito { color: var(--nao-escuro); }
+  .mensagem {
+    margin: 0 0 18px;
+    font-size: clamp(1.05rem, 4.4vw, 1.3rem);
+    font-weight: 700;
+    color: #3b2a5e;
+    line-height: 1.3;
+  }
+  .cartao .botao { font-size: 1.1rem; padding: .6em 1.5em; }
+
+  #confete { position: fixed; inset: 0; z-index: 11; pointer-events: none; }
+
+  @media (max-height: 560px) {
+    main { gap: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lampada, .sim .rosto, .nao .rosto { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="fundo" id="fundo" aria-hidden="true"></div>
+<div class="fosco" aria-hidden="true"></div>
+
+<main>
+  <h1>Sorvetinho hoje? 🍦</h1>
+
+  <div class="roleta" id="roleta" role="button" tabindex="0" aria-label="Girar a roleta do sorvetinho">
+    <div class="aro"></div>
+    <div class="lampadas" id="lampadas"></div>
+    <div class="disco"><canvas id="canvas"></canvas></div>
+    <div class="centro"><span>🍦</span></div>
+    <div class="ponteiro">
+      <svg viewBox="0 0 60 80" aria-hidden="true">
+        <path d="M30 78 L4 18 A28 28 0 1 1 56 18 Z" fill="#fff" stroke="#1f1147" stroke-width="5" stroke-linejoin="round"/>
+        <circle cx="30" cy="26" r="9" fill="#d92b2b"/>
+      </svg>
+    </div>
+  </div>
+
+</main>
+
+<div class="veu" id="veu" role="dialog" aria-modal="true" aria-live="polite">
+  <div class="cartao" id="cartao">
+    <div class="rosto" id="rosto"></div>
+    <p class="veredito" id="veredito"></p>
+    <p class="mensagem" id="mensagem"></p>
+    <button class="botao" id="denovo" type="button">Girar de novo</button>
+  </div>
+</div>
+
+<canvas id="confete"></canvas>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ======== PERSONALIZE AQUI ======== */
+  // Fotos do amigo: coloque os arquivos na pasta img/ com esses nomes.
+  // Enquanto nao existirem, aparece um emoji no lugar.
+  // Rostos sorteados: img/feliz1.png ... feliz12.png e img/triste1.png ... triste15.png
+  // (arquivo que nao existir e simplesmente pulado)
+  var QTD_FELIZ = 12, QTD_TRISTE = 15;
+
+  var MSG_SIM = [
+    "É NÓIS! Sorvetinho liberado, meu patrão! 🍦",
+    "Hoje não foi de F, foi de SORVETE!",
+    "Foi de base... de base de casquinha crocante. 😎",
+    "O VAR confirmou: sorvetinho valendo!",
+    "Hoje você ganha mais que o Vasco!",
+    "Liberado pelo conselho supremo da casquinha.",
+    "Bora, que a dieta só começa segunda.",
+    "Bolinha dupla e calda extra, você merece!",
+    "Foi de sobremesa: sorvete liberado!",
+    "Sorvete na veia, campeão!",
+    "O freezer abriu as portas pra você.",
+    "Calda, granulado e zero culpa!"
+  ];
+  var MSG_NAO = [
+    "Foi de F. O sorvetinho não vem hoje. 💀",
+    "Foi de Vasco. Perdeu de goleada pro sorvete.",
+    "Foi de base... o sorvetinho foi de base. 😭",
+    "Foi de arrasta pra cima, meu patrão.",
+    "O sorvete foi pro VAR e o VAR anulou.",
+    "Foi de ralo. Escorreu a casquinha.",
+    "O freezer te deixou no vácuo.",
+    "Aceita que dói menos. Foi de F.",
+    "Hoje a casquinha tá de mal com você.",
+    "Foi de F no chat e foi de base no sorvete.",
+    "Foi de Vasco: rebaixado da sorveteria.",
+    "Hoje é água gelada e olhe lá. 💧"
+  ];
+
+  // Fundo: as fotos se repetem numa grade 4x3 (3x4 no celular), em ordem aleatoria a cada visita
+  var FUNDOS = ["img/mc1.jpg", "img/mc2.jpg", "img/bk1.webp", "img/bk2.jpg"];
+
+  // 6 fatias, so duas cores: verde = SIM, vermelho = NAO (50% cada)
+  var SIM = { t: "SIM", sim: true,  c1: "#2fd27a", c2: "#15a355" };
+  var NAO = { t: "NÃO", sim: false, c1: "#ff5a5a", c2: "#d92b2b" };
+  var FATIAS = [SIM, NAO, SIM, NAO, SIM, NAO];
+  /* ================================== */
+
+  // monta o fundo
+  (function () {
+    var f = document.getElementById("fundo");
+    var tiles = [];
+    for (var k = 0; k < 3; k++) {
+      tiles = tiles.concat(FUNDOS.slice().sort(function () { return Math.random() - .5; }));
+    }
+    tiles.forEach(function (src) {
+      var d = document.createElement("div");
+      d.style.backgroundImage = "url('" + src + "')";
+      d.style.backgroundPosition = (30 + Math.random() * 40) + "% " + (30 + Math.random() * 40) + "%";
+      f.appendChild(d);
+    });
+  })();
+
+  var roleta = document.getElementById("roleta");
+  var canvas = document.getElementById("canvas");
+  var veu = document.getElementById("veu");
+  var cartao = document.getElementById("cartao");
+  var girando = false;
+  var rotacao = 0;
+  var ANG = 360 / FATIAS.length;
+
+  // lampadas do aro
+  var lamp = document.getElementById("lampadas");
+  var N_LAMP = 24;
+  for (var i = 0; i < N_LAMP; i++) {
+    var d = document.createElement("div");
+    d.className = "lampada";
+    var a = (360 / N_LAMP) * i;
+    d.style.transform = "rotate(" + a + "deg) translateY(calc(var(--tamanho) * -.4675))";
+    lamp.appendChild(d);
+  }
+
+  // desenha o disco
+  function desenhar() {
+    var lado = canvas.parentElement.clientWidth;
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = canvas.height = Math.round(lado * dpr);
+    var ctx = canvas.getContext("2d");
+    var r = canvas.width / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(r, r);
+    var s = (Math.PI * 2) / FATIAS.length;
+    FATIAS.forEach(function (f, i) {
+      var a0 = -Math.PI / 2 + i * s, a1 = a0 + s;
+      var g = ctx.createRadialGradient(0, 0, r * .15, 0, 0, r);
+      g.addColorStop(0, f.c1);
+      g.addColorStop(1, f.c2);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, r, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.lineWidth = r * .012;
+      ctx.strokeStyle = "rgba(255,255,255,.9)";
+      ctx.stroke();
+
+      // texto
+      ctx.save();
+      ctx.rotate(a0 + s / 2);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.font = "900 " + Math.round(r * .3) + "px 'Trebuchet MS','Segoe UI',sans-serif";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = r * .04;
+      ctx.strokeStyle = "rgba(0,0,0,.35)";
+      ctx.fillStyle = "#fff";
+      ctx.strokeText(f.t, r * .92, 0);
+      ctx.fillText(f.t, r * .92, 0);
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  desenhar();
+  window.addEventListener("resize", desenhar);
+
+  function sortear(lista) { return lista[Math.floor(Math.random() * lista.length)]; }
+
+  function girar() {
+    if (girando) return;
+    girando = true;
+    roleta.classList.add("girando", "balanca");
+
+    var alvo = Math.floor(Math.random() * FATIAS.length);
+    var folga = (Math.random() - .5) * ANG * .7;        // nao para sempre no meio da fatia
+    var voltas = 5 + Math.floor(Math.random() * 3);     // 5 a 7 voltas
+    var destino = -(alvo * ANG + ANG / 2) + folga;       // fatia alvo embaixo do ponteiro (topo)
+    var atual = ((rotacao % 360) + 360) % 360;
+    var passo = ((destino - atual) % 360 + 360) % 360;   // sempre gira no sentido horario
+    rotacao += voltas * 360 + passo;
+    canvas.style.transform = "rotate(" + rotacao + "deg)";
+
+    var terminou = false;
+    function fim() {
+      if (terminou) return;
+      terminou = true;
+      canvas.removeEventListener("transitionend", fim);
+      roleta.classList.remove("balanca");
+      setTimeout(function () { mostrar(FATIAS[alvo].sim); }, 350);
+    }
+    canvas.addEventListener("transitionend", fim);
+    setTimeout(fim, 5600); // garantia se transitionend nao disparar
+    if (navigator.vibrate) { try { navigator.vibrate(30); } catch (e) {} }
+  }
+
+  var ultimoRosto = {};
+  function carregarRosto(sim) {
+    var tipo = sim ? "feliz" : "triste";
+    var total = sim ? QTD_FELIZ : QTD_TRISTE;
+    var rosto = document.getElementById("rosto");
+    rosto.innerHTML = sim ? "😄" : "😭";
+    // sorteia sem repetir o ultimo; se o arquivo nao existir, tenta outro
+    var ordem = [];
+    for (var n = 1; n <= total; n++) if (n !== ultimoRosto[tipo]) ordem.push(n);
+    ordem.sort(function () { return Math.random() - .5; });
+    (function tentar() {
+      var n = ordem.shift();
+      if (!n) return;
+      var img = new Image();
+      img.alt = sim ? "Amigo feliz" : "Amigo triste";
+      img.onload = function () {
+        ultimoRosto[tipo] = n;
+        rosto.innerHTML = "";
+        rosto.appendChild(img);
+      };
+      img.onerror = tentar;
+      img.src = "img/" + tipo + n + ".png";
+    })();
+  }
+
+  function mostrar(sim) {
+    cartao.className = "cartao " + (sim ? "sim" : "nao");
+    document.getElementById("veredito").textContent = sim ? "SIM! 🎉" : "NÃO... 😢";
+    document.getElementById("mensagem").textContent = sortear(sim ? MSG_SIM : MSG_NAO);
+
+    carregarRosto(sim);
+
+    veu.classList.add("aberto");
+    if (sim) confete();
+    if (navigator.vibrate) { try { navigator.vibrate(sim ? [60, 40, 60] : 200); } catch (e) {} }
+    document.getElementById("denovo").focus({ preventScroll: true });
+  }
+
+  function fechar() {
+    veu.classList.remove("aberto");
+    roleta.classList.remove("girando");
+    girando = false;
+  }
+
+  // ---- confete ----
+  var cv = document.getElementById("confete");
+  var cx = cv.getContext("2d");
+  var pecas = [], rodando = false;
+  function confete() {
+    cv.width = innerWidth; cv.height = innerHeight;
+    var cores = ["#facc15", "#34d399", "#f472b6", "#60a5fa", "#fb923c", "#a78bfa"];
+    for (var i = 0; i < 160; i++) {
+      pecas.push({
+        x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5,
+        w: 6 + Math.random() * 8, h: 8 + Math.random() * 10,
+        vx: (Math.random() - .5) * 3, vy: 2 + Math.random() * 4,
+        a: Math.random() * 6, va: (Math.random() - .5) * .3,
+        c: cores[i % cores.length]
+      });
+    }
+    if (!rodando) { rodando = true; requestAnimationFrame(quadro); }
+  }
+  function quadro() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    pecas = pecas.filter(function (p) { return p.y < cv.height + 30; });
+    pecas.forEach(function (p) {
+      p.x += p.vx; p.y += p.vy; p.a += p.va; p.vy += .03;
+      cx.save();
+      cx.translate(p.x, p.y); cx.rotate(p.a);
+      cx.fillStyle = p.c;
+      cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      cx.restore();
+    });
+    if (pecas.length) requestAnimationFrame(quadro);
+    else { rodando = false; cx.clearRect(0, 0, cv.width, cv.height); }
+  }
+
+  // ---- eventos (mouse e toque) ----
+  roleta.addEventListener("click", girar);
+  roleta.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); girar(); }
+  });
+  document.getElementById("denovo").addEventListener("click", fechar);
+  veu.addEventListener("click", function (e) { if (e.target === veu) fechar(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && veu.classList.contains("aberto")) fechar();
+  });
+})();
+</script>
+</body>
+</html>
