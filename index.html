@@ -318,7 +318,10 @@
   // Fundo: as fotos se repetem numa grade 4x3 (3x4 no celular), em ordem aleatoria a cada visita
   var FUNDOS = ["img/mc1.jpg", "img/mc2.jpg", "img/bk1.webp", "img/bk2.jpg"];
 
-  // 6 fatias, so duas cores: verde = SIM, vermelho = NAO (50% cada)
+  // Chance de cair em NAO (0 a 1). 0.7 = 70% NAO, 30% SIM.
+  var CHANCE_NAO = 0.7;
+
+  // 6 fatias, so duas cores: verde = SIM, vermelho = NAO (visualmente 50/50; a chance real e CHANCE_NAO)
   var SIM = { t: "SIM", sim: true,  c1: "#2fd27a", c2: "#15a355" };
   var NAO = { t: "NÃO", sim: false, c1: "#ff5a5a", c2: "#d92b2b" };
   var FATIAS = [SIM, NAO, SIM, NAO, SIM, NAO];
@@ -410,7 +413,11 @@
     girando = true;
     roleta.classList.add("girando", "balanca");
 
-    var alvo = Math.floor(Math.random() * FATIAS.length);
+    // primeiro sorteia SIM/NAO pela chance configurada, depois uma fatia desse tipo
+    var sairNao = Math.random() < CHANCE_NAO;
+    var candidatas = [];
+    FATIAS.forEach(function (f, i) { if (f.sim !== sairNao) candidatas.push(i); });
+    var alvo = sortear(candidatas);
     var folga = (Math.random() - .5) * ANG * .7;        // nao para sempre no meio da fatia
     var voltas = 5 + Math.floor(Math.random() * 3);     // 5 a 7 voltas
     var destino = -(alvo * ANG + ANG / 2) + folga;       // fatia alvo embaixo do ponteiro (topo)
